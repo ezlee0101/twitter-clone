@@ -27,7 +27,7 @@ jobs:
       - name: Load test data
         run: |
           docker-compose exec -T web \
-            python load_data.py --users 100 --posts 200
+            python load_tweets.py --users 100 --posts 200
 
       - name: Run smoke tests
         run: |
