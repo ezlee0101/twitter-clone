@@ -16,25 +16,25 @@ jobs:
       - name: Install Docker Compose
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker compose
+          sudo apt-get install -y docker-compose
 
       - name: Build & start development stack
         run: |
-          docker compose up -d --build
+          docker-compose up -d --build
           docker ps -a
           sleep 20
 
       - name: Load test data
         run: |
-          docker compose exec -T web \
+          docker-compose exec -T web \
             python load_data.py --users 100 --posts 200
 
       - name: Run smoke tests
         run: |
-          docker compose exec -T web \
+          docker-compose exec -T web \
             bash scripts/smoke_tests.sh
 
       - name: Tear down services
         if: always()
         run: |
-          docker ompose down --volumes
+          docker-compose down --volumes
