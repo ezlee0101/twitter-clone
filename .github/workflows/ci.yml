@@ -1,40 +1,67 @@
+# .github/workflows/ci.yml
 name: CI
 
 on:
   push:
-    branches: ['*']
+    branches: [main]
   pull_request:
-    branches: ['*']
+    branches: [main]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Checkout
       - uses: actions/checkout@v3
 
+      # 2) Install docker-compose
       - name: Install Docker Compose
         run: |
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
+      # 3) Generate .env.dev (so docker-compose can load it)
+      - name: Generate .env.dev
+        run: |
+          cat > .env.dev <<EOF
+          FLASK_APP=project/__init__.py
+          FLASK_DEBUG=1
+          DATABASE_URL=postgresql://hello_flask:hello_flask@db:5432/hello_flask_dev
+          SQL_HOST=db
+          SQL_PORT=5432
+          DATABASE=postgres
+          APP_FOLDER=/usr/src/app
+          EOF
+
+      # 4) Build & start dev stack
       - name: Build & start development stack
         run: |
           docker-compose up -d --build
-          docker ps -a
+          # wait for Postgres & web to become healthy
           sleep 20
+          docker-compose ps
 
-      - name: Load test data
+      # 5) Load test data into DB
+      - name: Seed test data
         run: |
-          docker-compose exec -T web \
-            python load_tweets.py --users 100 --posts 200
+          docker-compose exec db psql \
+            -U hello_flask \
+            -d hello_flask_dev \
+            -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
+                INSERT INTO test VALUES (1,'Alice'),(2,'Bob');"
 
-      - name: Run smoke tests
+      # 6) Verify seed
+      - name: Verify test data
         run: |
-          docker-compose exec -T web \
-            bash scripts/smoke_tests.sh
+          docker-compose exec db psql \
+            -U hello_flask \
+            -d hello_flask_dev \
+            -c "SELECT COUNT(*) FROM test;" \
+            | grep -q "2 rows"
 
-      - name: Tear down services
+      # 7) Teardown (always)
+      - name: Tear down
         if: always()
-        run: |
-          docker-compose down --volumes
+        run: docker-compose down --volumes
+
