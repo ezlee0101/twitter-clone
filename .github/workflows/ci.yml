@@ -45,7 +45,7 @@ jobs:
       # 5) Load test data into DB
       - name: Seed test data
         run: |
-          docker-compose exec db psql \
+          docker-compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
             -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
@@ -54,7 +54,7 @@ jobs:
       # 6) Verify seed
       - name: Verify test data
         run: |
-          docker-compose exec db psql \
+          docker-compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
             -c "SELECT COUNT(*) FROM test;" \
