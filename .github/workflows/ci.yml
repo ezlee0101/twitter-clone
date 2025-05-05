@@ -59,7 +59,7 @@ jobs:
             -d hello_flask_dev \
             -t -A \
             -c "SELECT COUNT(*) FROM test;" \
-            | grep -q "2 rows"
+          | grep -q "^2$"
 
       # 7) Teardown (always)
       - name: Tear down
