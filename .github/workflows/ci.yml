@@ -57,6 +57,7 @@ jobs:
           docker-compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
+            -t -A \
             -c "SELECT COUNT(*) FROM test;" \
             | grep -q "2 rows"
 
