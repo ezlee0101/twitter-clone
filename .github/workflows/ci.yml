@@ -1,67 +1,36 @@
-# .github/workflows/ci.yml
-name: CI
+steps:
+  - uses: actions/checkout@v3
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # 1) Build & start your services in the background
+  - name: Build & start services
+    run: |
+      docker compose build web
+      docker compose up -d db web
+      sleep 15           # wait for Postgres to finish init
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+  # 2) Now you can exec into db
+  - name: Seed test data
+    run: |
+      docker compose exec -T db psql \
+        -U hello_flask \
+        -d hello_flask_dev \
+        -c "CREATE TABLE test(id INT PRIMARY KEY); \
+            INSERT INTO test VALUES (1),(2);"
 
-    steps:
-      # 1) Checkout
-      - uses: actions/checkout@v3
+  - name: Verify test data
+    run: |
+      docker compose exec -T db psql \
+        -U hello_flask \
+        -d hello_flask_dev \
+        -t -A \
+        -c "SELECT COUNT(*) FROM test;" \
+      | grep -q "^2$"
 
-      # 2) (removed — docker compose is already present)
+  # 3) Optional: smoke-test your web app
+  - name: Smoke-test web
+    run: curl --fail http://localhost:2233/
 
-      # 3) Generate .env.dev
-      - name: Create .env.dev
-        run: |
-          cat > .env.dev <<EOF
-          FLASK_APP=project/__init__.py
-          FLASK_DEBUG=1
-          DATABASE_URL=postgresql://hello_flask:hello_flask@db:5432/hello_flask_dev
-          SQL_HOST=db
-          SQL_PORT=5432
-          DATABASE=postgres
-          APP_FOLDER=/usr/src/app
-          EOF
-
-      # 4) Build & start
-      - name: Build and start services
-        run: |
-          docker compose build web
-          docker compose up -d db web
-          sleep 15
-          docker compose ps
-
-      # 5) Seed test data
-      - name: Seed test data
-        run: |
-          docker compose exec -T db psql \
-            -U hello_flask \
-            -d hello_flask_dev \
-            -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
-                INSERT INTO test VALUES (1,'Alice'),(2,'Bob');"
-
-      # 6) Verify seed
-      - name: Verify test data
-        run: |
-          docker compose exec -T db psql \
-            -U hello_flask \
-            -d hello_flask_dev \
-            -t -A \
-            -c "SELECT COUNT(*) FROM test;" \
-            | grep -q "^2$"
-
-      # 7) Smoke-test web
-      - name: Smoke test web
-        run: curl --fail http://localhost:2233/ || (echo "Web failed" && exit 1)
-
-      # 8) Tear down
-      - name: Tear down
-        if: always()
-        run: docker compose down --volumes --remove-orphans
+  # 4) Always tear down
+  - name: Tear down
+    if: always()
+    run: docker compose down --volumes --remove-orphans
