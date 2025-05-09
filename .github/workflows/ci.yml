@@ -34,7 +34,7 @@ steps:
       # 2) (removed — docker compose is already present)
 
       # 3) Generate .env.dev
-      - name: Create .env.dev
+      - name: Generate .env.dev
         run: |
           cat > .env.dev <<EOF
           FLASK_APP=project/__init__.py
@@ -45,6 +45,7 @@ steps:
           DATABASE=postgres
           APP_FOLDER=/usr/src/app
           EOF
+
 
       # 4) Build & start
       - name: Build and start services
