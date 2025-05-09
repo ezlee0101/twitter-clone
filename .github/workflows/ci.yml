@@ -15,13 +15,9 @@ jobs:
       # 1) Checkout
       - uses: actions/checkout@v3
 
-      # 2) Install Docker & Compose (if not already present)
-      - name: Install Docker Compose plugin
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io docker-compose-plugin
+      # 2) (removed — docker compose is already present)
 
-      # 3) Generate .env.dev for dev compose
+      # 3) Generate .env.dev
       - name: Create .env.dev
         run: |
           cat > .env.dev <<EOF
@@ -34,19 +30,16 @@ jobs:
           APP_FOLDER=/usr/src/app
           EOF
 
-      # 4) Build images & start db + web in the background
+      # 4) Build & start
       - name: Build and start services
         run: |
           docker compose build web
           docker compose up -d db web
-          # give Postgres a moment to initialize
-          echo "Waiting for Postgres to start…"
           sleep 15
           docker compose ps
 
-      # 5) Seed a tiny test table
+      # 5) Seed test data
       - name: Seed test data
-        shell: bash
         run: |
           docker compose exec -T db psql \
             -U hello_flask \
@@ -54,9 +47,8 @@ jobs:
             -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
                 INSERT INTO test VALUES (1,'Alice'),(2,'Bob');"
 
-      # 6) Verify the seed worked
+      # 6) Verify seed
       - name: Verify test data
-        shell: bash
         run: |
           docker compose exec -T db psql \
             -U hello_flask \
@@ -65,12 +57,11 @@ jobs:
             -c "SELECT COUNT(*) FROM test;" \
             | grep -q "^2$"
 
-      # 7) Smoke-test the web endpoint
+      # 7) Smoke-test web
       - name: Smoke test web
-        run: |
-          curl --fail http://localhost:2233/ || (echo "Web endpoint failed" && exit 1)
+        run: curl --fail http://localhost:2233/ || (echo "Web failed" && exit 1)
 
-      # 8) Tear down everything (always)
+      # 8) Tear down
       - name: Tear down
         if: always()
         run: docker compose down --volumes --remove-orphans
