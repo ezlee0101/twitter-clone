@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Home Feed</h2>
+  <ul>
+    {% for tweet in tweets %}
+      <li>
+        <strong>{{ tweet.username }}</strong>
+        <em>{{ tweet.created_at }}</em><br>
+        {{ tweet.content }}
+      </li>
+    {% endfor %}
+  </ul>
+  <div>
+    {% if prev_page %}
+      <a href="{{ url_for('main.home') }}?page={{ prev_page }}">&laquo; Previous</a>
+    {% endif %}
+    {% if next_page %}
+      <a href="{{ url_for('main.home') }}?page={{ next_page }}">Next &raquo;</a>
+    {% endif %}
+  </div>
+{% endblock %}

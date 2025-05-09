@@ -1,11 +1,7 @@
 import os
-
-
-basedir = os.path.abspath(os.path.dirname(__file__))
-
-
-class Config(object):
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite://")
+class Config:
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    STATIC_FOLDER = f"{os.getenv('APP_FOLDER')}/project/static"
-    MEDIA_FOLDER = f"{os.getenv('APP_FOLDER')}/project/media"
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev')
+    STATIC_FOLDER = os.path.join(os.getcwd(), 'project', 'static')
+    MEDIA_FOLDER = os.path.join(os.getcwd(), 'project', 'media')

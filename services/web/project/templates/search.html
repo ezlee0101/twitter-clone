@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h2>Search Tweets</h2>
+  <form action="" method="get">
+    <input name="q" value="{{ query }}" placeholder="Search…" required>
+    <button type="submit">Search</button>
+  </form>
+
+  {% if query %}
+    <p>Showing matches for “<strong>{{ query }}</strong>”</p>
+    <ul>
+      {% for t in tweets %}
+        <li>
+          <strong>{{ t.username }}</strong>
+          <em>{{ t.created_at }}</em><br>
+          {{ t.snippet | safe }}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <div>
+      {% if prev_page %}
+        <a href="?q={{ query }}&page={{ prev_page }}">« Previous</a>
+      {% endif %}
+      {% if next_page %}
+        <a href="?q={{ query }}&page={{ next_page }}">Next »</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
+
