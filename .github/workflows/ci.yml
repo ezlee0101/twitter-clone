@@ -37,7 +37,7 @@ jobs:
       # 4) Build & start dev stack
       - name: Build & start development stack
         run: |
-          docker-compose up -d --build
+          docker compose up -d --build
           # wait for Postgres & web to become healthy
           sleep 20
           docker-compose ps
@@ -45,7 +45,7 @@ jobs:
       # 5) Load test data into DB
       - name: Seed test data
         run: |
-          docker-compose exec -T db psql \
+          docker compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
             -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
@@ -54,7 +54,7 @@ jobs:
       # 6) Verify seed
       - name: Verify test data
         run: |
-          docker-compose exec -T db psql \
+          docker compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
             -t -A \
