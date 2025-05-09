@@ -26,11 +26,9 @@ steps:
         -c "SELECT COUNT(*) FROM test;" \
       | grep -q "^2$"
 
-<<<<<<< HEAD
   # 3) Optional: smoke-test your web app
   - name: Smoke-test web
     run: curl --fail http://localhost:2233/
-=======
       # 2) (removed — docker compose is already present)
 
       # 3) Generate .env.dev
@@ -82,7 +80,6 @@ steps:
       - name: Tear down
         if: always()
         run: docker compose down --volumes --remove-orphans
->>>>>>> 716f32b (finish)
 
   # 4) Always tear down
   - name: Tear down
