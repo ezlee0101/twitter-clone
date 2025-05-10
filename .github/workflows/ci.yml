@@ -14,7 +14,7 @@ jobs:
       # 1) Checkout code
       - uses: actions/checkout@v3
 
-      # 2) Generate .env.dev
+      # 2) Create .env.dev so your compose file can see DATABASE_URL, etc
       - name: Create .env.dev
         run: |
           echo "FLASK_APP=project/__init__.py"       > .env.dev
@@ -25,15 +25,16 @@ jobs:
           echo "DATABASE=postgres"                  >> .env.dev
           echo "APP_FOLDER=/usr/src/app"            >> .env.dev
 
-      # 3) Build images & start db + web
+      # 3) Build images & start db + web in the background
       - name: Build and start services
         run: |
           docker compose build web
           docker compose up -d db web
+          # give Postgres a moment to initialize
           sleep 15
           docker compose ps
 
-      # 4) Seed a tiny test table
+      # 4) Seed a tiny test table (ensure db is still running)
       - name: Seed test data
         run: |
           docker compose exec -T db psql \
@@ -52,12 +53,13 @@ jobs:
             -c "SELECT COUNT(*) FROM test;" \
           | grep -q "^2$"
 
-      # 6) Smoke-test the web endpoint
+      # 6) Quick smoke-test your web app
       - name: Smoke test web
         run: |
-          curl --fail http://localhost:2233/ || (echo "Web failed" && exit 1)
+          curl --fail http://localhost:2233/ || (echo "Web endpoint failed" && exit 1)
 
-      # 7) Tear everything down
+      # 7) Tear everything down (volumes + orphans)
       - name: Tear down
         if: always()
-        run: docker compose down --volumes --remove-orphans
+        run: |
+          docker compose down --volumes --remove-orphans
