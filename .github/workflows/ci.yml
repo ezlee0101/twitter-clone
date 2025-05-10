@@ -40,7 +40,7 @@ jobs:
       # 3) Build & bring up everything
       - name: Build & bring up services
         run: |
-          docker compose up -d --build
+          docker compose up -d --build --wait
 
       # 4) **Wait** for Postgres (allow failures in the loop)
       - name: Wait for Postgres
