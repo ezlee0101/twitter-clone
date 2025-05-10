@@ -14,7 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-# Install Docker Compose V2 plugin
+
+      # 1) Install Docker Compose V2 plugin
       - name: Install Docker Compose V2
         run: |
           mkdir -p ~/.docker/cli-plugins
@@ -23,7 +24,7 @@ jobs:
             -o ~/.docker/cli-plugins/docker-compose
           chmod +x ~/.docker/cli-plugins/docker-compose
 
-      # Create our .env.dev so docker compose can read it
+      # 2) Generate .env.dev
       - name: Generate .env.dev
         run: |
           cat > .env.dev <<EOF
@@ -36,21 +37,22 @@ jobs:
           APP_FOLDER=/usr/src/app
           EOF
 
-      # Build and start everything (db + web)
+      # 3) Build & bring up everything
       - name: Build & bring up services
         run: |
           docker compose up -d --build
 
-      # Wait for Postgres to be ready
+      # 4) **Wait** for Postgres (allow failures in the loop)
       - name: Wait for Postgres
         run: |
-          for i in {1..30}; do
-            docker compose exec -T db pg_isready -U hello_flask && break
-            echo "Waiting for Postgres..."
+          set +e
+          until docker compose exec -T db pg_isready -U hello_flask; do
+            echo "Waiting for Postgres…"
             sleep 2
           done
+          set -e
 
-      # Seed a tiny test table
+      # 5) Seed a tiny test table
       - name: Seed test data
         run: |
           docker compose exec -T db psql \
@@ -59,7 +61,7 @@ jobs:
             -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
                 INSERT INTO test (id,name) VALUES (1,'Alice'),(2,'Bob');"
 
-      # Verify those two rows exist
+      # 6) Verify those two rows exist
       - name: Verify test data
         run: |
           docker compose exec -T db psql \
@@ -69,12 +71,13 @@ jobs:
             -c "SELECT COUNT(*) FROM test;" \
           | grep -q "^2$"
 
-      # A simple HTTP smoke-test against your Flask home page
+      # 7) Simple HTTP smoke-test
       - name: Smoke-test web
         run: |
           curl --fail http://localhost:2233/ || (echo "Web is not responding" && exit 1)
 
-      # Tear down (always)
+      # 8) Tear down (always)
       - name: Tear down
         if: always()
         run: docker compose down --volumes --remove-orphans
+
