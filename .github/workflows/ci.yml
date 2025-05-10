@@ -1,16 +1,22 @@
 name: CI
 
 on:
+<<<<<<< HEAD
   push:
     branches: [main]
   pull_request:
     branches: [main]
+=======
+  push:       { branches: [main] }
+  pull_request: { branches: [main] }
+>>>>>>> 152b09f (pls)
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
+<<<<<<< HEAD
       # 1) Checkout code
       - uses: actions/checkout@v3
 
@@ -35,24 +41,59 @@ jobs:
           docker compose ps
 
       # 4) Seed a tiny test table (ensure db is still running)
+=======
+      - uses: actions/checkout@v3
+
+      # 1) Install docker-compose so "docker-compose up" actually works
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      # 2) Create .env.dev
+      - name: Create .env.dev
+        run: |
+          echo "FLASK_APP=project/__init__.py"       > .env.dev
+          echo "FLASK_DEBUG=1"                      >> .env.dev
+          echo "DATABASE_URL=postgresql://hello_flask:hello_flask@db:5432/hello_flask_dev" >> .env.dev
+          echo "SQL_HOST=db"                        >> .env.dev
+          echo "SQL_PORT=5432"                      >> .env.dev
+          echo "DATABASE=postgres"                  >> .env.dev
+          echo "APP_FOLDER=/usr/src/app"            >> .env.dev
+
+      # 3) Build & start the stack
+      - name: Build & start services
+        run: |
+          docker-compose build web
+          docker-compose up -d db web
+          sleep 15            # wait for Postgres to finish initdb hooks
+          docker-compose ps
+
+      # 4) Seed a tiny test table
+>>>>>>> 152b09f (pls)
       - name: Seed test data
         run: |
-          docker compose exec -T db psql \
+          docker-compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
             -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
                 INSERT INTO test VALUES (1,'Alice'),(2,'Bob');"
 
+<<<<<<< HEAD
       # 5) Verify the seed worked
+=======
+      # 5) Verify it
+>>>>>>> 152b09f (pls)
       - name: Verify test data
         run: |
-          docker compose exec -T db psql \
+          docker-compose exec -T db psql \
             -U hello_flask \
             -d hello_flask_dev \
             -t -A \
             -c "SELECT COUNT(*) FROM test;" \
           | grep -q "^2$"
 
+<<<<<<< HEAD
       # 6) Quick smoke-test your web app
       - name: Smoke test web
         run: |
@@ -63,3 +104,15 @@ jobs:
         if: always()
         run: |
           docker compose down --volumes --remove-orphans
+=======
+      # 6) Smoke-test the web endpoint
+      - name: Smoke test web
+        run: |
+          curl --fail http://localhost:2233/ || (echo "Web failed" && exit 1)
+
+      # 7) Tear down
+      - name: Tear down
+        if: always()
+        run: docker-compose down --volumes --remove-orphans
+
+>>>>>>> 152b09f (pls)
