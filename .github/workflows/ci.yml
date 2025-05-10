@@ -1,51 +1,31 @@
-steps:
-  - uses: actions/checkout@v3
+name: CI
 
-  # 1) Build & start your services in the background
-  - name: Build & start services
-    run: |
-      docker compose build web
-      docker compose up -d db web
-      sleep 15           # wait for Postgres to finish init
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
-  # 2) Now you can exec into db
-  - name: Seed test data
-    run: |
-      docker compose exec -T db psql \
-        -U hello_flask \
-        -d hello_flask_dev \
-        -c "CREATE TABLE test(id INT PRIMARY KEY); \
-            INSERT INTO test VALUES (1),(2);"
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
 
-  - name: Verify test data
-    run: |
-      docker compose exec -T db psql \
-        -U hello_flask \
-        -d hello_flask_dev \
-        -t -A \
-        -c "SELECT COUNT(*) FROM test;" \
-      | grep -q "^2$"
+    steps:
+      # 1) Checkout code
+      - uses: actions/checkout@v3
 
-  # 3) Optional: smoke-test your web app
-  - name: Smoke-test web
-    run: curl --fail http://localhost:2233/
-      # 2) (removed — docker compose is already present)
-
-      # 3) Generate .env.dev
-      - name: Generate .env.dev
+      # 2) Generate .env.dev
+      - name: Create .env.dev
         run: |
-          cat > .env.dev <<EOF
-          FLASK_APP=project/__init__.py
-          FLASK_DEBUG=1
-          DATABASE_URL=postgresql://hello_flask:hello_flask@db:5432/hello_flask_dev
-          SQL_HOST=db
-          SQL_PORT=5432
-          DATABASE=postgres
-          APP_FOLDER=/usr/src/app
-          EOF
+          echo "FLASK_APP=project/__init__.py"       > .env.dev
+          echo "FLASK_DEBUG=1"                      >> .env.dev
+          echo "DATABASE_URL=postgresql://hello_flask:hello_flask@db:5432/hello_flask_dev" >> .env.dev
+          echo "SQL_HOST=db"                        >> .env.dev
+          echo "SQL_PORT=5432"                      >> .env.dev
+          echo "DATABASE=postgres"                  >> .env.dev
+          echo "APP_FOLDER=/usr/src/app"            >> .env.dev
 
-
-      # 4) Build & start
+      # 3) Build images & start db + web
       - name: Build and start services
         run: |
           docker compose build web
@@ -53,7 +33,7 @@ steps:
           sleep 15
           docker compose ps
 
-      # 5) Seed test data
+      # 4) Seed a tiny test table
       - name: Seed test data
         run: |
           docker compose exec -T db psql \
@@ -62,7 +42,7 @@ steps:
             -c "CREATE TABLE IF NOT EXISTS test (id INT PRIMARY KEY, name TEXT);
                 INSERT INTO test VALUES (1,'Alice'),(2,'Bob');"
 
-      # 6) Verify seed
+      # 5) Verify the seed worked
       - name: Verify test data
         run: |
           docker compose exec -T db psql \
@@ -70,18 +50,14 @@ steps:
             -d hello_flask_dev \
             -t -A \
             -c "SELECT COUNT(*) FROM test;" \
-            | grep -q "^2$"
+          | grep -q "^2$"
 
-      # 7) Smoke-test web
+      # 6) Smoke-test the web endpoint
       - name: Smoke test web
-        run: curl --fail http://localhost:2233/ || (echo "Web failed" && exit 1)
+        run: |
+          curl --fail http://localhost:2233/ || (echo "Web failed" && exit 1)
 
-      # 8) Tear down
+      # 7) Tear everything down
       - name: Tear down
         if: always()
         run: docker compose down --volumes --remove-orphans
-
-  # 4) Always tear down
-  - name: Tear down
-    if: always()
-    run: docker compose down --volumes --remove-orphans
